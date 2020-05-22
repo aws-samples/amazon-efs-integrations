@@ -171,7 +171,7 @@ export class EcsEfsIntegrationService {
       executionRoleArn: service.taskDefinition.executionRole?.roleArn,
       family: service.taskDefinition.family,
       memory: '1024',
-      networkMode: serviceType === ServiceType.EC2 ? 'bridge' : 'awsvpc',
+      networkMode: serviceType === ServiceType.EC2 ? NetworkMode.BRIDGE : NetworkMode.AWS_VPC,
       requiresCompatibilities: [
         serviceType.toUpperCase(),
       ],
