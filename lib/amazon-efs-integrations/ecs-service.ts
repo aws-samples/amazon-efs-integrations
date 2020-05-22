@@ -1,4 +1,4 @@
-import { CfnService, ContainerImage, Cluster, FargatePlatformVersion } from '@aws-cdk/aws-ecs';
+import { CfnService, ContainerImage, Cluster, Ec2TaskDefinition, FargatePlatformVersion, NetworkMode, Protocol, LogDriver } from '@aws-cdk/aws-ecs';
 import { FileSystem } from '@aws-cdk/aws-efs';
 import { Duration } from '@aws-cdk/core';
 import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from '@aws-cdk/custom-resources';
@@ -44,14 +44,27 @@ export class EcsEfsIntegrationService {
 
     const containerImage = 'coderaiser/cloudcmd:14.3.10-alpine';
     if (serviceType === ServiceType.EC2) {
+      /*
+        Initial task definition with the 80:80 port mapping is needed here to ensure the ALB security
+        group is created properly. This is not necessary for the Fargate service.
+        @todo: Remove when CDK supports EFS for ECS fully.
+      */
+      const initialEc2TaskDefinition = new Ec2TaskDefinition(cluster, 'Ec2ServiceInitialTaskDefinition', {})
+      const container = initialEc2TaskDefinition.addContainer('cloudcmd', {
+        image: ContainerImage.fromRegistry(containerImage),
+        logging: LogDriver.awsLogs({streamPrefix: 'ecs'}),
+        memoryLimitMiB: 512,
+      })
+      container.addPortMappings({
+        containerPort: 80,
+        hostPort: 80,
+        protocol: Protocol.TCP
+      })
       service = new ApplicationLoadBalancedEc2Service(cluster.stack, 'Ec2Service', {
         cluster,
         desiredCount: 2,
         memoryLimitMiB: 512,
-        taskImageOptions: {
-          containerName: 'cloudcmd',
-          image: ContainerImage.fromRegistry(containerImage),
-        },
+        taskDefinition: initialEc2TaskDefinition,
         ...props,
       });
     } else {
