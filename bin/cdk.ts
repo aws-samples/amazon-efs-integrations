@@ -8,6 +8,6 @@ const app = new cdk.App();
 new AmazonEfsIntegrationsStack(app, 'AmazonEfsIntegrationsStack', {
   createEcsOnEc2Service: true,
   createEcsOnFargateService: true,
-  createEfsFilesystem: true,
-  createEfsAccessPoints: true,
+  createEfsFilesystem: false,
+  createEfsAccessPoints: false,
 });
