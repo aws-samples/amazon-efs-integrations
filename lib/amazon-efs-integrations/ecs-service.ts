@@ -88,7 +88,20 @@ export class EcsEfsIntegrationService {
 
     if (efsAccessPoints) {
       efsAccessPoints.forEach((ap: AwsCustomResource, name: string) => {
-        mountPoints.push({containerPath: '/files' + ap.getResponseField('RootDirectory.Path'), sourceVolume: name})
+        // Don't add the "EcsPrivate" AP on the Fargate task (and vice-versa)
+        if (
+          (serviceType === ServiceType.EC2 && name === 'FargatePrivate') ||
+          (serviceType === ServiceType.FARGATE && name === 'EcsPrivate')
+        ) {
+          return
+        }
+
+        // Drop the "ecs" or "fargate" suffix if it's the "private" access point
+        const containerPath = '/files' + (
+          (name === 'FargatePrivate' || name === 'EcsPrivate') ? '/private' : ap.getResponseField('RootDirectory.Path')
+        );
+
+        mountPoints.push({containerPath, sourceVolume: name})
         volumes.push({
           name,
           efsVolumeConfiguration: {
